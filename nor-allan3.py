@@ -42,10 +42,18 @@ def check_mac(task):
         for mac_address in mac_addresses:
             if mac_address in entry:
                 mac_found = True
+               
+                
+                
                 # Extract the interface and MAC address from the entry
                 parts = entry.split()
                 interface = parts[3]
                 mac = parts[1]
+                print(f"MAC address matching the pattern found on {hostname} ({ip})")
+                print(f"Building: {building} / {cab}")
+                print(f'{interface} - {mac}')
+                print("-" * 30)
+                 #print(f"SNMP Location: {snmp_location}")
                 break
         if mac_found:
             break
@@ -56,7 +64,7 @@ def check_mac(task):
         result = task.run(task=netmiko_send_command, command_string=cmd, enable=True)
         interface_status = result[0].result
         if 'trunk' in interface_status:
-            print(f'interface {task.host,interface} is trunk port')        
+            #print(f'interface {task.host,interface} is trunk port')        
             mac_found = False
             
 
@@ -66,14 +74,12 @@ def check_mac(task):
         unique_buildings_cabs.add((building, cab))
 
     # Print the host and interface information where a match is found
-    if mac_found:
-        print(f"MAC address matching the pattern found on {hostname} ({ip})")
-        print(f"Building: {building}")
-        print(f"Cab: {cab}")
-        print(f"SNMP Location: {snmp_location}")
-        print(f"Interface: {interface}")
-        print(f"MAC Address: {mac}")
-        print("-" * 30)
+   # if mac_found:
+    #    print(f"MAC address matching the pattern found on {hostname} ({ip})")
+     #   print(f"Building: {building} / {cab}")
+      #  #print(f"SNMP Location: {snmp_location}")
+       # print(f'{interface} - {mac}')
+        #print("-" * 30)
 
 # Run the task on all hosts
 result = nr.run(task=check_mac)
