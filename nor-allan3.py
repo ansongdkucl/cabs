@@ -1,13 +1,16 @@
 import csv
 from nornir import InitNornir
 from nornir_netmiko.tasks import netmiko_send_command
+import string
 
 # Initialize Nornir with the host file
 nr = InitNornir(config_file='/home/ansongdk/scripts/inventory/config.yaml')
-#nr = InitNornir(config_file='/home/ansongdk/scripts/vlans/config.yaml')
 
 # Define the MAC addresses you want to check
 mac_addresses = ["2829.86", "00c0.b7"]
+
+# Set to store unique occurrences of building and cab
+unique_buildings_cabs = set()
 
 # List to store the hosts that do not match the pattern
 non_matching_hosts = []
@@ -36,22 +39,31 @@ def check_mac(task):
     mac_address_table = result[0].result
     mac_found = False
     for entry in mac_address_table.splitlines():
-        if "Gi" not in entry and "Fa" not in entry:
-            continue  # Skip trunk ports
         for mac_address in mac_addresses:
             if mac_address in entry:
                 mac_found = True
                 # Extract the interface and MAC address from the entry
                 parts = entry.split()
-                interface = parts[1]
-                mac = parts[2]
+                interface = parts[3]
+                mac = parts[1]
                 break
         if mac_found:
             break
 
+    # Check if the interface is a trunk port
+    if mac_found:
+        cmd = f"show run int {interface}"
+        result = task.run(task=netmiko_send_command, command_string=cmd, enable=True)
+        interface_status = result[0].result
+        if 'trunk' in interface_status:
+            print(f'interface {task.host,interface} is trunk port')        
+            mac_found = False
+            
+
     # Save the result
     if not mac_found:
-        non_matching_hosts.append((hostname, building, cab, snmp_location))
+        non_matching_hosts.append((building, cab, snmp_location))
+        unique_buildings_cabs.add((building, cab))
 
     # Print the host and interface information where a match is found
     if mac_found:
@@ -74,6 +86,6 @@ for host in non_matching_hosts:
 # Save the non-matching hosts to the CSV report
 with open("report.csv", mode="w", newline="") as file:
     writer = csv.writer(file)
-    writer.writerow(["Hostname", "Building", "Cab", "SNMP Location"])
-    for host in non_matching_hosts:
-        writer.writerow(host)
+    writer.writerow(["Building", "Cab", "SNMP Location"])
+    writer.writerows(unique_buildings_cabs)
+   
